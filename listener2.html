@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<style>
+.balloon {
+  position: relative;
+  width: 180px;
+  #height: 50px;
+  background-color: #8cb101;;
+  text-align: center;
+  border-radius: 10px 10px 10px 10px / 10px 10px 10px 10px;
+  padding: 10px;
+}
+.balloon .triangle {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  margin-left: -10px;
+  width: 0;
+  height: 0;
+  border-top: 10px solid #8cb101;;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+}
+
+.octo-say {
+	position: relative;
+    top: 20px;
+    left: 10px;
+}
+
+</style>
+  <meta charset="utf-8">
+  <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> 
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"> -->
+  <script src="./jquery-3.1.1.min.js"></script>
+
+ <!-- <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+ -->
+  <script src="./eventemitter2.min.js"></script>
+  <script src="./roslib.min.js"></script>
+
+  <script>
+  // Connecting to ROS
+  // -----------------
+
+  console.log("start");
+  var ros = new ROSLIB.Ros();
+
+  // Create a connection to the rosbridge WebSocket server.
+ // ros.connect('ws://localhost:9090');
+	var ip_add = location.hostname;
+	console.log(ip_add);
+ 	var acc_url = "ws://" + ip_add + ":9090";
+	console.log(acc_url);
+	ros.connect(acc_url);
+
+  //Subscribing to a Topic
+  //----------------------
+
+  // We first create a Topic object with details of the topic's name
+  // and message type. Note that we can call publish or subscribe on the same topic object.
+  var listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/chatter',
+    messageType : 'std_msgs/String'
+  });
+
+  var img_wid = 100;
+  var img_heigt = 84;
+
+  setInterval(function(){
+  	$(".oct_img").attr("src", "./Octocat.png");
+
+  	setTimeout(function(){
+  		$(".oct_img").attr("src", "./Octocat_close.png");
+  	},2000);
+  }, 2200);
+
+  var says = ["ボク、OctoCat。よろしくね。","体の動きで入力をお知らせするよ。", "Lets Go!"];
+  var saying = function(message_list){
+  	var interval = 1500;
+  	console.log(message_list);
+  	if(message_list.length > 0){
+		setTimeout(function(){
+			$(".octo-say-text").text(message_list.shift());
+			saying(message_list);
+		}, interval);
+	}else{
+		setTimeout(function(){
+			$(".octo-say").css("display", "none");
+		}, interval);
+	}
+  }
+  saying(says);
+
+  var old_x = 0;
+  var old_y = 0;
+  var old_z = 0;
+
+  var low_pass_cof = 0.5;
+
+  // Then we add a callback to be called every time a message is published on this topic.
+  listener.subscribe(function(message) {
+   console.log('Received message on ' + listener.name + ': ' +  message.data);
+    var jsonObj = JSON.parse(message.data);
+    var x = jsonObj['x'];
+    var y= jsonObj['y'];
+    var z = jsonObj['z'];
+
+    old_x = x * low_pass_cof + old_x * (1 - low_pass_cof);
+    old_y = y * low_pass_cof + old_y * (1 - low_pass_cof);
+    old_z = z * low_pass_cof + old_z * (1 - low_pass_cof);
+
+    x = old_x;
+    y = old_y;
+    z = old_z;
+    
+    $(".x_val").text(x);
+    $(".y_val").text(y);
+    $(".z_val").text(z);
+
+
+   if(z <= -10){
+   	z = -9;
+   }
+    var width_size = img_wid / (Math.log(z + 10) + 1) * 3.2;
+    var height_size = img_heigt / (Math.log(z+10) +1) * 3.2;
+
+    var width = width_size + "px";
+    var height = height_size + "px";
+
+	var top = (y + 102 - height_size/2.0) + "px";
+    var left = (x + 98 - width_size/2.0) + "px" ;
+
+
+    $(".pointer").css("top", top).css("left", left);
+    $(".oct_img").css("width", width).css("height", height);
+  });
+
+  </script>
+</head>
+
+<body>
+  <h1>3軸圧力センサ出力</h1>
+ 
+    <div class="val">
+    	<div>x: <span class="x_val"></span></div> 
+    	<div>y: <span class="y_val"></span></div>
+    	<div>z: <span class="z_val"></span></div>
+    </div>
+    <div class="frame" style="background-color: #d0d0d0; width:200px; height: 200px">
+    	<div class="balloon octo-say">
+    		<div class="octo-say-text">
+  				ボク、OctoCat。よろしくね。
+  			</div>
+  			<div class="triangle"></div>
+		</div>
+
+	    <div class="pointer" style="position: relative; top:60px; left: 48px">
+	    	<img class="oct_img" id="open" src="./Octocat.png" style="width: 100px; height: 84px;">
+	    	<!-- <img class="oct_img" id="close" src="./Octocat_close.png" style="width: 100px; height: 84px; display: none;"> -->
+	    </div>
+	</div>
+
+	<!--<video src="back.mp4" width="640" height="360"  type="video/mp4 poster="sample.jpg" controls autoplay preload></video> -->
+
+
+</body>
+</html>
