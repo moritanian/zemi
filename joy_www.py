@@ -75,13 +75,17 @@ def init_device(ser):
 	print "init_press arr = "
 	print init_press_arr
 
-def joy(pub, x,y, buttons = []):
-	joy = joy()
-	joy.axes = [x,y]
-	joy.buttons = buttons
+def pub_joy(pub, x,y):
+	joy = Joy()
+	joy.axes = [x, y, 0.0, 0.0, 0.0]
+	joy.buttons = [0 ,0 ,0,0,0,0,0,0,0,0,0,0,0]
 	pub.publish(joy)
 	
-
+def pub_twist(pub, x, y):
+	twist = Twist()
+	twist.linear.x = press_arr[0]/2.0
+	twist.angular.z = press_arr[1]/2.0
+	twist_pub.publish(twist)
 
 
 def exit():
@@ -92,12 +96,14 @@ def exit():
 #main
 if  __name__ == "__main__":
 
-	#node_name = 'joy_twist'
-	#rospy.init_node(node_name)
-	#twist_pub = rospy.Publisher('iwm_twist', Twist, queue_size = 1)
-	
-	node_name = 'www_node'
+	node_name = 'joy_twist'
 	rospy.init_node(node_name)
+	twist_pub = rospy.Publisher('iwm_twist', Twist, queue_size = 1)
+
+	joy_pub = rospy.Publisher('joy', Joy, queue_size = 1)
+	
+	#node_name = 'www_node'
+	#rospy.init_node(node_name)
 	www_pub = rospy.Publisher('/chatter', String, queue_size = 1)
 
 
@@ -119,12 +125,8 @@ if  __name__ == "__main__":
 
 		json_str = json.dumps(pos)
 		www_pub.publish(json_str)
-	
 
-		#twist = Twist()
-		#twist.linear.x = press_arr[0]/10.0
-		#twist.angular.z = press_arr[1]/10.0
-		#twist_pub.publish(twist)
+		pub_joy(joy_pub, press_arr[0]/5.0, press_arr[1]/5.0)
 		
 		time.sleep(0.1)
 	
